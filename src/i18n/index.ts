@@ -91,6 +91,16 @@ const pt = {
   pasteKey: 'Cole sua chave',
   continue: 'Continuar',
   skip: 'Configurar depois',
+  chatgptButton: 'Continuar com ChatGPT',
+  chatgptHelp: 'Use sua assinatura ChatGPT Plus ou Pro para gerar a história, sem precisar de chave. Imagens e vozes de IA continuam usando outro provedor.',
+  chatgptSteps:
+    '1. Entre na sua conta do ChatGPT e autorize o Taverna AI.\n2. No final, o navegador abre uma página que NÃO carrega (endereço começando com 127.0.0.1). Isso é normal!\n3. Copie o endereço inteiro dessa página, volte aqui e cole abaixo.',
+  chatgptPaste: 'Cole aqui o endereço da página',
+  chatgptFinish: 'Concluir login',
+  chatgptConnected: 'Usando plano do ChatGPT',
+  manageUsage: 'Gerenciar uso',
+  signOut: 'Sair',
+  error_plan_limit: 'Você atingiu o limite do seu plano ChatGPT. Veja em Configurações → Gerenciar uso, ou espere renovar.',
   error_invalid_key: 'Chave inválida ou ausente. Confira nas Configurações.',
   error_no_credit: 'Sem saldo na sua conta do provedor.',
   error_rate_limit: 'Muitas requisições. Espere um pouco e tente de novo.',
@@ -192,6 +202,16 @@ const en: Dict = {
   pasteKey: 'Paste your key',
   continue: 'Continue',
   skip: 'Set up later',
+  chatgptButton: 'Continue with ChatGPT',
+  chatgptHelp: 'Use your ChatGPT Plus or Pro subscription to generate the story, no key needed. Images and AI voices still use another provider.',
+  chatgptSteps:
+    '1. Sign in to your ChatGPT account and authorize Taverna AI.\n2. At the end, the browser opens a page that does NOT load (address starting with 127.0.0.1). That is expected!\n3. Copy the full address of that page, come back here and paste it below.',
+  chatgptPaste: 'Paste the page address here',
+  chatgptFinish: 'Finish sign-in',
+  chatgptConnected: 'Using ChatGPT plan',
+  manageUsage: 'Manage usage',
+  signOut: 'Sign out',
+  error_plan_limit: 'You reached your ChatGPT plan limit. See Settings → Manage usage, or wait for it to reset.',
   error_invalid_key: 'Invalid or missing key. Check Settings.',
   error_no_credit: 'Your provider account is out of credit.',
   error_rate_limit: 'Too many requests. Wait a bit and try again.',
@@ -214,5 +234,6 @@ export function errorMessage(lang: Language, e: unknown): string {
   const key = `error_${kind ?? 'unknown'}` as TKey;
   const base = dictionaries[lang][key] ?? dictionaries[lang].error_unknown;
   const detail = (e as Error)?.message;
+  if (kind === 'invalid_key' && detail) return detail;
   return kind && kind !== 'unknown' ? base : `${base}${detail ? `\n${detail.slice(0, 200)}` : ''}`;
 }

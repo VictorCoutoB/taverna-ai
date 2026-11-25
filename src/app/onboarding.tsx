@@ -4,6 +4,7 @@ import { Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-nat
 import { errorMessage, useT } from '@/i18n';
 import { KEY_HELP, makeTextProvider, TEXT_PROVIDERS, type TextProviderId } from '@/providers/registry';
 import { useSettings } from '@/state/settings';
+import { autoSelectChatGPTModel, ChatGPTSignIn } from '@/ui/ChatGPTSignIn';
 import { Button, ChipGroup, Label } from '@/ui/components';
 import { colors, ui } from '@/ui/theme';
 
@@ -17,6 +18,7 @@ export default function Onboarding() {
   const [ollamaUrl, setOllamaUrl] = useState(settings.local.ollama);
   const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null);
   const [testing, setTesting] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
 
   const choose = (p: TextProviderId) => {
     setProvider(p);
@@ -42,6 +44,7 @@ export default function Onboarding() {
     }
     if (meta.key && key.trim()) await setKey(meta.key, key);
     await update({ onboarded: true, local, text: { provider, model: settings.text.provider === provider ? settings.text.model : meta.defaultModel } });
+    if (provider === 'chatgpt') await autoSelectChatGPTModel();
     router.replace('/');
   };
 
@@ -74,7 +77,9 @@ export default function Onboarding() {
       <View style={ui.card}>
         <Label>{t('chooseProvider')}</Label>
         <ChipGroup options={(Object.keys(TEXT_PROVIDERS) as TextProviderId[]).map((id) => ({ id, label: TEXT_PROVIDERS[id].label }))} value={provider} onChange={choose} />
-        {meta.key ? (
+        {meta.signIn ? (
+          <ChatGPTSignIn onChange={(s) => setSignedIn(!!s)} />
+        ) : meta.key ? (
           <>
             <Text style={ui.muted}>{KEY_HELP[meta.key].steps}</Text>
             <Button small kind="ghost" label={`${t('howToGetKey')} ↗`} onPress={() => Linking.openURL(KEY_HELP[meta.key!].url)} />
@@ -98,7 +103,7 @@ export default function Onboarding() {
         {status && <Text style={{ color: status.ok ? colors.success : colors.danger }}>{status.msg}</Text>}
       </View>
 
-      <Button label={t('continue')} disabled={!agreed || (!!meta.key && !key.trim())} loading={testing} onPress={() => finish(true)} />
+      <Button label={t('continue')} disabled={!agreed || (!!meta.key && !key.trim()) || (!!meta.signIn && !signedIn)} loading={testing} onPress={() => finish(true)} />
       <Button label={t('skip')} kind="ghost" disabled={!agreed} onPress={() => finish(false)} />
     </ScrollView>
   );

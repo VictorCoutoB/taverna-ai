@@ -10,6 +10,21 @@ async function secure() {
   return import('expo-secure-store');
 }
 
+/** Valor secreto genérico (ex.: sessão do ChatGPT). */
+export async function getSecret(name: string): Promise<string | null> {
+  const ss = await secure();
+  return ss ? ss.getItemAsync(name) : (globalThis.localStorage?.getItem(name) ?? null);
+}
+
+export async function setSecret(name: string, value: string | null): Promise<void> {
+  const ss = await secure();
+  if (ss) {
+    if (value) await ss.setItemAsync(name, value);
+    else await ss.deleteItemAsync(name);
+  } else if (value) globalThis.localStorage?.setItem(name, value);
+  else globalThis.localStorage?.removeItem(name);
+}
+
 export async function loadKeys(): Promise<Keys> {
   const ss = await secure();
   const keys: Keys = {};

@@ -1,12 +1,13 @@
 import { localSdImage, openAIImage, openRouterImage, stabilityImage } from './image';
 import { deviceSpeech, elevenLabsSpeech, openAISpeech } from './speech';
 import { anthropic } from './text/anthropic';
+import { chatgptPlan } from './text/chatgptPlan';
 import { gemini } from './text/gemini';
 import { openAICompatible } from './text/openaiCompatible';
 import type { ImageProvider, SpeechProvider, TextProvider } from './types';
 import { ProviderError } from './types';
 
-export type TextProviderId = 'openrouter' | 'anthropic' | 'openai' | 'gemini' | 'ollama';
+export type TextProviderId = 'chatgpt' | 'openrouter' | 'anthropic' | 'openai' | 'gemini' | 'ollama';
 export type ImageProviderId = 'openrouter' | 'openai' | 'stability' | 'sdlocal';
 export type SpeechProviderId = 'device' | 'openai' | 'elevenlabs';
 /** Serviços que precisam de chave (cada pessoa usa a sua). */
@@ -16,10 +17,13 @@ export interface ProviderMeta {
   label: string;
   key?: KeyId;
   local?: boolean;
+  /** Usa login (assinatura) em vez de chave. */
+  signIn?: boolean;
   defaultModel: string;
 }
 
 export const TEXT_PROVIDERS: Record<TextProviderId, ProviderMeta> = {
+  chatgpt: { label: 'ChatGPT (sua assinatura Plus/Pro)', signIn: true, defaultModel: '' },
   openrouter: { label: 'OpenRouter (vários modelos)', key: 'openrouter', defaultModel: 'anthropic/claude-sonnet-4.5' },
   anthropic: { label: 'Anthropic (Claude)', key: 'anthropic', defaultModel: 'claude-sonnet-5-5' },
   openai: { label: 'OpenAI (GPT)', key: 'openai', defaultModel: 'gpt-4.1-mini' },
@@ -64,6 +68,14 @@ function needKey(keys: Keys, id: KeyId): string {
 
 export function makeTextProvider(id: TextProviderId, keys: Keys, local: LocalUrls): TextProvider {
   switch (id) {
+    case 'chatgpt': {
+      // Carregado sob demanda: depende de expo-crypto/secure-store.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { getAccessToken } = require('../auth/chatgpt') as typeof import('../auth/chatgpt');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { appAuthDeps } = require('../auth/deps') as typeof import('../auth/deps');
+      return chatgptPlan(() => getAccessToken(appAuthDeps));
+    }
     case 'openrouter':
       return openAICompatible({
         id,

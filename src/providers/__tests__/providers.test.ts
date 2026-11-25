@@ -2,6 +2,7 @@ import { setFetch } from '../http';
 import { anthropic } from '../text/anthropic';
 import { gemini } from '../text/gemini';
 import { openAICompatible } from '../text/openaiCompatible';
+import { chatgptPlan } from '../text/chatgptPlan';
 import { localSdImage, openRouterImage } from '../image';
 import { ProviderError } from '../types';
 
@@ -101,6 +102,37 @@ describe('gemini', () => {
     expect(body.systemInstruction.parts[0].text).toBe('S');
     expect(body.contents.map((c: any) => c.role)).toEqual(['user', 'model']);
     expect(calls[0].url).toContain('/models/gemini-x:generateContent');
+  });
+});
+
+describe('chatgptPlan', () => {
+  it('usa Responses API com regras da prévia e lê os deltas', async () => {
+    const calls = mockFetch(() =>
+      sse([
+        { type: 'response.created' },
+        { type: 'response.output_text.delta', delta: 'A porta ' },
+        { type: 'response.output_text.delta', delta: 'range.' },
+        { type: 'response.completed' },
+      ]),
+    );
+    const chunks: string[] = [];
+    const text = await chatgptPlan(async () => 'TOKEN').chat(
+      [
+        { role: 'system', content: 'S' },
+        { role: 'user', content: 'u' },
+      ],
+      { model: 'gpt-x', temperature: 0.9, maxTokens: 500, onToken: (c) => chunks.push(c) },
+    );
+    expect(text).toBe('A porta range.');
+    expect(calls[0].url).toBe('https://api.openai.com/v1/responses');
+    expect((calls[0].init!.headers as Record<string, string>).Authorization).toBe('Bearer TOKEN');
+    const body = JSON.parse(calls[0].init!.body as string);
+    expect(body).toEqual({ model: 'gpt-x', instructions: 'S', input: [{ role: 'user', content: 'u' }], store: false, stream: true });
+  });
+
+  it('limite do plano vira kind=plan_limit', async () => {
+    mockFetch(() => sse([{ type: 'response.failed', response: { error: { code: 'subscription_sharing_usage_limit_exceeded', message: 'limit' } } }]));
+    await expect(chatgptPlan(async () => 't').chat([{ role: 'user', content: 'x' }], { model: 'm' })).rejects.toMatchObject({ kind: 'plan_limit' });
   });
 });
 

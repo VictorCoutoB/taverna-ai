@@ -55,7 +55,7 @@ export interface SpeechProvider {
   stop(): Promise<void>;
 }
 
-export type ProviderErrorKind = 'invalid_key' | 'no_credit' | 'rate_limit' | 'network' | 'unavailable' | 'bad_response' | 'unknown';
+export type ProviderErrorKind = 'invalid_key' | 'no_credit' | 'plan_limit' | 'rate_limit' | 'network' | 'unavailable' | 'bad_response' | 'unknown';
 
 export class ProviderError extends Error {
   constructor(
