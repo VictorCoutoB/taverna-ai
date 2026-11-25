@@ -14,6 +14,7 @@ import { getAdventure, saveAdventure } from '@/storage/adventures';
 import { useSettings } from '@/state/settings';
 import { Button } from '@/ui/components';
 import { DiceCard } from '@/ui/DiceCard';
+import { ModelPicker, useCurrentModelLabel } from '@/ui/ModelPicker';
 import { SheetPanel } from '@/ui/SheetPanel';
 import { colors, ui } from '@/ui/theme';
 
@@ -47,6 +48,8 @@ export default function Game() {
   const [input, setInput] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [modelOpen, setModelOpen] = useState(false);
+  const modelLabel = useCurrentModelLabel('text');
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [imageBusy, setImageBusy] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState<string | null>(null);
@@ -281,6 +284,7 @@ export default function Game() {
 
       <View style={{ padding: 12, paddingBottom: 12 + insets.bottom, gap: 8, borderTopWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
         <View style={ui.row}>
+          <Button small kind="secondary" label={`🧠 ${modelLabel}`} onPress={() => setModelOpen(true)} style={{ flexShrink: 1 }} />
           <Button small kind="secondary" label={`💡 ${t('suggestions')}`} onPress={ideas} disabled={busy || !!dead} />
           <Button small kind="secondary" label={`↩️ ${t('undo')}`} onPress={undo} disabled={busy || adventure.messages.length === 0} />
         </View>
@@ -298,6 +302,8 @@ export default function Game() {
           <Button label="➤" onPress={send} disabled={busy || !input.trim() || !!dead} />
         </View>
       </View>
+
+      <ModelPicker kind="text" visible={modelOpen} onClose={() => setModelOpen(false)} />
 
       {adventure.sheet && <SheetPanel visible={sheetOpen} onClose={() => setSheetOpen(false)} sheet={adventure.sheet} lang={adventure.language} />}
 

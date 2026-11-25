@@ -18,6 +18,7 @@ import {
 import type { ModelInfo } from '@/providers/types';
 import { IMAGE_STYLES, useSettings } from '@/state/settings';
 import { ChatGPTSignIn } from '@/ui/ChatGPTSignIn';
+import { ModelRow } from '@/ui/ModelPicker';
 import { Button, ChipGroup, Label } from '@/ui/components';
 import { colors, ui } from '@/ui/theme';
 
@@ -48,22 +49,20 @@ export default function SettingsScreen() {
   const t = useT();
   const { settings, keys, update, setKey } = useSettings();
   const lang = settings.language;
-  const [picker, setPicker] = useState<{ kind: 'text' | 'image' | 'voice'; items: ModelInfo[] } | null>(null);
+  const [picker, setPicker] = useState<{ kind: 'voice'; items: ModelInfo[] } | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [msg, setMsg] = useState<Record<string, { ok: boolean; text: string }>>({});
   const [draftKeys, setDraftKeys] = useState<Record<string, string>>({});
 
   const note = (k: string, ok: boolean, text: string) => setMsg((m) => ({ ...m, [k]: { ok, text } }));
 
-  const load = async (kind: 'text' | 'image' | 'voice') => {
+  const load = async (kind: 'voice') => {
     setLoading(kind);
     try {
-      const items =
-        kind === 'text'
-          ? await makeTextProvider(settings.text.provider, keys, settings.local).listModels()
-          : kind === 'image'
-            ? await makeImageProvider(settings.image.provider, keys, settings.local).listModels()
-            : (await makeSpeechProvider(settings.speech.provider, keys, lang === 'pt' ? 'pt-BR' : 'en-US').listVoices()).map((v) => ({ id: v.id, name: v.name }));
+      const items = (await makeSpeechProvider(settings.speech.provider, keys, lang === 'pt' ? 'pt-BR' : 'en-US').listVoices()).map((v) => ({
+        id: v.id,
+        name: v.name,
+      }));
       setPicker({ kind, items });
       note(kind, true, '');
     } catch (e) {
@@ -104,16 +103,7 @@ export default function SettingsScreen() {
           onChange={(provider) => update({ text: { provider, model: TEXT_PROVIDERS[provider].defaultModel } })}
         />
         {settings.text.provider === 'chatgpt' && <ChatGPTSignIn />}
-        <Text style={ui.muted}>{t('model')}</Text>
-        <TextInput
-          style={ui.input}
-          value={settings.text.model}
-          onChangeText={(model) => update({ text: { ...settings.text, model } })}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        <Button small kind="secondary" label={t('loadModels')} loading={loading === 'text'} onPress={() => load('text')} />
-        {renderMsg("text")}
+        <ModelRow kind="text" />
       </View>
 
       <View style={ui.card}>
@@ -123,16 +113,7 @@ export default function SettingsScreen() {
           value={settings.image.provider}
           onChange={(provider) => update({ image: { ...settings.image, provider, model: IMAGE_PROVIDERS[provider].defaultModel } })}
         />
-        <Text style={ui.muted}>{t('model')}</Text>
-        <TextInput
-          style={ui.input}
-          value={settings.image.model}
-          onChangeText={(model) => update({ image: { ...settings.image, model } })}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        <Button small kind="secondary" label={t('loadModels')} loading={loading === 'image'} onPress={() => load('image')} />
-        {renderMsg("image")}
+        <ModelRow kind="image" />
         <Text style={ui.muted}>{t('imageStyle')}</Text>
         <ChipGroup options={IMAGE_STYLES.map((s) => ({ id: s, label: s }))} value={settings.image.style} onChange={(style) => update({ image: { ...settings.image, style } })} />
         <Text style={ui.muted}>{t('imageWhen')}</Text>
@@ -231,8 +212,6 @@ export default function SettingsScreen() {
         items={picker?.items ?? []}
         onClose={() => setPicker(null)}
         onPick={(id) => {
-          if (picker?.kind === 'text') update({ text: { ...settings.text, model: id } });
-          if (picker?.kind === 'image') update({ image: { ...settings.image, model: id } });
           if (picker?.kind === 'voice') update({ speech: { ...settings.speech, voice: id } });
           setPicker(null);
         }}
