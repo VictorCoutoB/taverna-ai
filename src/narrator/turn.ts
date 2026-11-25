@@ -68,6 +68,7 @@ export async function runTurn(input: TurnInput): Promise<TurnResult> {
 
   const first = parseNarratorResponse(await ask(provider, buildContext(working(), system, budget).chat, input));
   newMessages.push(message('narrator', first.narration || '…'));
+  newMessages[0].sheetBefore = adventure.sheet;
 
   if (adventure.mode !== 'rpg' || !adventure.sheet) {
     return { newMessages, sheet: adventure.sheet, rejected: [] };

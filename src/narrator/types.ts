@@ -32,6 +32,8 @@ export interface StoryMessage {
   content: string;
   check?: CheckResult;
   imageUri?: string;
+  /** Ficha antes deste turno (para desfazer). Fica na primeira mensagem do turno. */
+  sheetBefore?: Sheet | null;
   createdAt: number;
 }
 
