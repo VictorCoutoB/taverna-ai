@@ -21,6 +21,11 @@ export function setFetch(fn: FetchFn | null) {
   fetchImpl = fn;
 }
 
+// Só em desenvolvimento: permite simular respostas da IA pelo console do navegador.
+if (typeof __DEV__ !== 'undefined' && __DEV__) {
+  (globalThis as Record<string, unknown>).__tavernaSetFetch = setFetch;
+}
+
 export function errorFromStatus(status: number, body: string): ProviderError {
   const detail = body.slice(0, 300);
   if (status === 401 || status === 403) return new ProviderError('invalid_key', detail || 'Chave inválida', status);
