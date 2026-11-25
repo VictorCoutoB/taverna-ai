@@ -14,6 +14,14 @@ export const colors = {
   player: '#2e3a4a',
 };
 
+/** Fontes de leitura (carregadas em _layout.tsx). */
+export const fonts = {
+  serif: 'Literata_400Regular',
+  serifItalic: 'Literata_400Regular_Italic',
+  serifBold: 'Literata_700Bold',
+  serifSemi: 'Literata_600SemiBold',
+};
+
 export const ui = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   pad: { padding: 16, gap: 12 },

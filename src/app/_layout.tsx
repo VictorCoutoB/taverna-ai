@@ -1,3 +1,5 @@
+import { Literata_400Regular, Literata_400Regular_Italic, Literata_600SemiBold, Literata_700Bold } from '@expo-google-fonts/literata';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -11,12 +13,18 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 export default function RootLayout() {
   const loaded = useSettings((s) => s.loaded);
   const load = useSettings((s) => s.load);
+  const [fontsLoaded, fontError] = useFonts({ Literata_400Regular, Literata_400Regular_Italic, Literata_600SemiBold, Literata_700Bold });
+  const ready = loaded && (fontsLoaded || !!fontError);
 
   useEffect(() => {
-    load().finally(() => SplashScreen.hideAsync().catch(() => {}));
+    load();
   }, [load]);
 
-  if (!loaded) {
+  useEffect(() => {
+    if (ready) SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
+
+  if (!ready) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color={colors.accent} />

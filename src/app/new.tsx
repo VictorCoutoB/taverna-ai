@@ -7,7 +7,8 @@ import { errorMessage, useT } from '@/i18n';
 import { generatePortrait } from '@/media';
 import { attrLabel } from '@/narrator/prompts';
 import { newId } from '@/narrator/turn';
-import type { Adventure, Character, GameMode } from '@/narrator/types';
+import { DEFAULT_STYLE, emptyJournal, type Adventure, type Character, type GameMode, type NarratorStyle } from '@/narrator/types';
+import { StylePicker } from '@/ui/StylePicker';
 import { checkText } from '@/safety/filter';
 import { saveAdventure } from '@/storage/adventures';
 import { useSettings } from '@/state/settings';
@@ -31,6 +32,7 @@ export default function NewAdventure() {
   const [backstory, setBackstory] = useState('');
   const [attrs, setAttrs] = useState<Attributes>(START_ATTRS);
   const [portrait, setPortrait] = useState(true);
+  const [style, setStyle] = useState<NarratorStyle>(DEFAULT_STYLE);
   const [busy, setBusy] = useState(false);
 
   const used = ATTRIBUTES.reduce((s, a) => s + attrs[a], 0);
@@ -79,6 +81,8 @@ export default function NewAdventure() {
       summary: '',
       summarizedUpTo: 0,
       messages: [],
+      style,
+      journal: emptyJournal(),
       createdAt: now,
       updatedAt: now,
     };
@@ -169,6 +173,11 @@ export default function NewAdventure() {
           ))}
         </View>
       )}
+
+      <View style={ui.card}>
+        <Label>{`🎭 ${t('narratorStyle')}`}</Label>
+        <StylePicker value={style} onChange={setStyle} lang={lang} />
+      </View>
 
       <View style={[ui.row, { justifyContent: 'space-between' }]}>
         <Text style={ui.text}>🖼️ {t('generatePortrait')}</Text>
