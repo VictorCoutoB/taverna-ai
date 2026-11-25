@@ -25,12 +25,22 @@ export function openRouterImage(apiKey: string): ImageProvider {
         content.unshift({ type: 'image_url', image_url: { url: opts.referenceImage } });
         content[1].text = `Keep the character from the reference image identical (face, hair, clothes). ${prompt}`;
       }
-      const json = await requestJson('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers,
-        signal: opts.signal,
-        body: JSON.stringify({ model: opts.model, modalities: ['image', 'text'], messages: [{ role: 'user', content }] }),
-      });
+      const call = (modalities: string[]) =>
+        requestJson('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers,
+          signal: opts.signal,
+          body: JSON.stringify({ model: opts.model, modalities, messages: [{ role: 'user', content }] }),
+        });
+      let json: any;
+      try {
+        // Modelos que escrevem e desenham (Gemini, GPT) aceitam image+text.
+        json = await call(['image', 'text']);
+      } catch (e) {
+        // Modelos só de imagem (FLUX, Seedream, Recraft…) exigem só "image".
+        if (e instanceof ProviderError && (e.status === 400 || e.kind === 'unavailable')) json = await call(['image']);
+        else throw e;
+      }
       const url = json?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
       if (typeof url !== 'string') throw new ProviderError('bad_response', 'O modelo não retornou imagem');
       return url;

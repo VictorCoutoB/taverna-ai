@@ -1,5 +1,38 @@
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
+# Taverna AI — project context for AI assistants (Codex, Gemini, Claude…)
+
+The project owner is a non-programmer who speaks **Brazilian Portuguese**: always reply in pt-BR,
+explain in plain language, and ask before anything irreversible (publishing, deleting, paid services).
+
+**What it is:** an open-source (MIT) Android app, FableAI-style: an AI-narrated text adventure/RPG.
+Each user brings their own AI (API key, or "Continue with ChatGPT" subscription login). No backend:
+everything is stored on the device. Repo: https://github.com/VictorCoutoB/taverna-ai
+
+**Read first:** `docs/CONTINUAR.md` (status, roadmap, how to run) and
+`docs/superpowers/specs/2026-11-25-ai-rpg-design.md` (original design).
+
+## Architecture (src/)
+| Folder | Role |
+|---|---|
+| `app/` | Screens (Expo Router): `index` (library), `new` (create adventure), `game/[id]` (play), `settings`, `onboarding` |
+| `engine/` | Deterministic game rules: d20 dice, character sheet, AI command validation (`commands.ts`), journal (`journal.ts`) |
+| `narrator/` | Prompts, context building + token budget, response parser (`<choices>` / `<commands>` blocks), `runTurn` |
+| `providers/` | AI adapters behind `TextProvider` / `ImageProvider` / `SpeechProvider` interfaces; `registry.ts` picks one from settings |
+| `auth/` | "Sign in with ChatGPT" OAuth (PKCE, dynamic client, paste-the-callback-URL flow on mobile) |
+| `storage/` | SQLite KV (localStorage on web), SecureStore for keys, images on disk, saves/branches, export/import |
+| `state/` | Zustand stores: settings, model cache/favorites/recents |
+| `ui/` | Components: ModelPicker, Story (book-style narration), JournalPanel, SavesPanel, BottomSheet, Cover… |
+| `safety/` | Local content filter + report button (Play Store requirement) |
+
+## Key rules
+- The AI never changes game numbers directly: it emits JSON commands that `engine/` validates and applies.
+- Narrator response format: narration, then `<choices>[3 strings]</choices>`, then `<commands>[...]</commands>`.
+- Never commit API keys. Keys live only in SecureStore on the user's phone.
+- Tests: `npx jest` (must pass), plus `npx tsc --noEmit` and `npx expo lint` before every commit.
+- Dev-only hook to fake AI replies in the browser preview: `globalThis.__tavernaSetFetch(fn)` (see `src/providers/http.ts`).
+- Git author: the repo uses the owner's GitHub noreply email; do not commit with any other identity.
+
 ## Expo has changed — do not trust your training data
 
 Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:
