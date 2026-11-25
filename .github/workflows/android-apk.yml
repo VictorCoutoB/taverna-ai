@@ -1,0 +1,91 @@
+# Monta o APK do Taverna AI nos computadores do GitHub (grátis para repositórios públicos)
+# e publica para download em Releases → "APK mais recente".
+#
+# Rodar manualmente: aba Actions → "Build APK Android" → Run workflow.
+#
+# Assinatura (opcional, para o APK poder atualizar o instalado pela Expo):
+# cadastre em Settings → Secrets and variables → Actions:
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+# Sem esses segredos, o APK sai com a assinatura de teste (funciona, mas é outra assinatura).
+name: Build APK Android
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Testes
+        run: npx jest --ci
+
+      - name: Número da versão
+        run: |
+          node -e "const f='app.json';const j=JSON.parse(require('fs').readFileSync(f));j.expo.android.versionCode=100+Number(process.env.GITHUB_RUN_NUMBER);require('fs').writeFileSync(f,JSON.stringify(j,null,2))"
+
+      - name: Gerar projeto Android
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Montar APK
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Assinar com a chave do app (se configurada)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > release.keystore
+            BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+            "$BT/apksigner" sign --ks release.keystore --ks-pass env:KEYSTORE_PASSWORD \
+              --ks-key-alias "$KEY_ALIAS" --key-pass env:KEY_PASSWORD "$APK"
+            rm release.keystore
+            echo "APK assinado com a chave do app."
+          else
+            echo "Sem segredos de assinatura: usando a assinatura de teste."
+          fi
+          cp "$APK" taverna-ai.apk
+
+      - name: Publicar em Releases (APK mais recente)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete apk-latest --yes --cleanup-tag || true
+          gh release create apk-latest taverna-ai.apk \
+            --title "APK mais recente" \
+            --notes "Montado automaticamente a partir de ${GITHUB_SHA::7} (build #${GITHUB_RUN_NUMBER}). Abra este link no celular e toque em taverna-ai.apk para instalar." \
+            --prerelease

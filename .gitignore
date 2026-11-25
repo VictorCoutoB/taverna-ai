@@ -46,3 +46,10 @@ example
 reports/
 research_notes/
 
+
+# credenciais de assinatura (nunca enviar)
+credentials.json
+credentials/
+*.jks
+*.keystore
+
