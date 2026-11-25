@@ -46,7 +46,8 @@ export function PlayerLine({ m, lang }: { m: StoryMessage; lang: Language }) {
       </View>
     );
   }
-  const text = m.actionMode === 'say' ? `${t.youSay}: “${m.content.replace(/^["“]|["”]$/g, '')}”` : `${t.youTry} ${m.content}`;
+  // As ações já vêm em primeira pessoa ("Falo com o ferreiro"), então mostramos como estão.
+  const text = m.actionMode === 'say' ? `${t.youSay}: “${m.content.replace(/^["“]|["”]$/g, '')}”` : m.content;
   return <Text style={{ fontFamily: fonts.serifItalic, color: colors.accent, fontSize: 15, lineHeight: 22, opacity: 0.9 }}>› {text}</Text>;
 }
 

@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { Redirect, router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, FlatList, Platform, Pressable, Text, View } from 'react-native';
@@ -7,8 +6,9 @@ import type { Adventure } from '@/narrator/types';
 import { newId } from '@/narrator/turn';
 import { deleteAdventure, listAdventures, parseImport, saveAdventure, serializeForExport } from '@/storage/adventures';
 import { useSettings } from '@/state/settings';
-import { Button } from '@/ui/components';
-import { colors, ui } from '@/ui/theme';
+import { ActionList, BottomSheet } from '@/ui/BottomSheet';
+import { Cover } from '@/ui/Cover';
+import { colors, fonts, ui } from '@/ui/theme';
 
 async function exportAdventure(a: Adventure) {
   const json = serializeForExport(a);
@@ -47,6 +47,8 @@ export default function Home() {
   const t = useT();
   const onboarded = useSettings((s) => s.settings.onboarded);
   const [items, setItems] = useState<Adventure[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [itemMenu, setItemMenu] = useState<Adventure | null>(null);
 
   const refresh = useCallback(() => {
     listAdventures().then(setItems).catch(() => setItems([]));
@@ -67,66 +69,99 @@ export default function Home() {
     ]);
   };
 
+  const coverUri = (a: Adventure) =>
+    [...a.messages].reverse().find((m) => m.imageUri)?.imageUri ?? a.characters.find((c) => c.isPlayer)?.portraitUri;
+  const lastNarration = (a: Adventure) => [...a.messages].reverse().find((m) => m.role === 'narrator')?.content ?? a.scenario.description;
+
   return (
     <View style={ui.screen}>
       <Stack.Screen
         options={{
           title: t('appName'),
+          headerTitleStyle: { fontFamily: fonts.serifBold, fontSize: 22 },
           headerRight: () => (
-            <Pressable onPress={() => router.push('/settings')} hitSlop={12} accessibilityLabel={t('settings')} style={{ paddingHorizontal: 8 }}>
-              <Text style={{ color: colors.text, fontSize: 22 }}>⚙</Text>
-            </Pressable>
+            <View style={[ui.row, { gap: 16, paddingHorizontal: 8 }]}>
+              <Pressable onPress={() => setMenuOpen(true)} hitSlop={12} accessibilityLabel={t('actions')}>
+                <Text style={{ color: colors.text, fontSize: 22, fontWeight: '700' }}>⋯</Text>
+              </Pressable>
+              <Pressable onPress={() => router.push('/settings')} hitSlop={12} accessibilityLabel={t('settings')}>
+                <Text style={{ color: colors.text, fontSize: 22 }}>⚙</Text>
+              </Pressable>
+            </View>
           ),
         }}
       />
       <FlatList
-        contentContainerStyle={ui.pad}
+        contentContainerStyle={[ui.pad, { gap: 16, paddingBottom: 40 }]}
         data={items}
         keyExtractor={(a) => a.id}
         ListHeaderComponent={
-          <View style={{ gap: 10 }}>
-            <Button label={`+  ${t('newAdventure')}`} onPress={() => router.push('/new')} />
-            <Button
-              label={t('import')}
-              kind="secondary"
-              onPress={() =>
-                importAdventure()
-                  .then((ok) => ok && refresh())
-                  .catch((e) => Alert.alert(t('import'), String(e?.message ?? e)))
-              }
-            />
-            <Text style={ui.h2}>{t('myAdventures')}</Text>
+          <View style={{ gap: 14 }}>
+            <Pressable onPress={() => router.push('/new')}>
+              <Cover scenarioId="fantasy" style={{ height: 130 }}>
+                <Text style={{ fontFamily: fonts.serifBold, color: '#fff', fontSize: 24 }}>+ {t('newAdventure')}</Text>
+                <Text style={{ color: '#eee', fontSize: 13 }}>{t('welcomeText').split('.')[0]}.</Text>
+              </Cover>
+            </Pressable>
+            <Text style={[ui.h2, { fontFamily: fonts.serifBold, fontSize: 20 }]}>{t('myAdventures')}</Text>
           </View>
         }
         ListEmptyComponent={<Text style={ui.muted}>{t('noAdventures')}</Text>}
-        renderItem={({ item }) => {
-          const portrait = item.characters.find((c) => c.isPlayer)?.portraitUri;
-          return (
-            <Pressable onPress={() => router.push(`/game/${item.id}`)} style={[ui.card, { flexDirection: 'row', gap: 12, alignItems: 'center' }]}>
-              {portrait ? (
-                <Image source={{ uri: portrait }} style={{ width: 56, height: 56, borderRadius: 10 }} />
-              ) : (
-                <View style={{ width: 56, height: 56, borderRadius: 10, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 26 }}>{item.mode === 'rpg' ? '🎲' : '📜'}</Text>
-                </View>
-              )}
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={[ui.text, { fontWeight: '700' }]} numberOfLines={1}>
-                  {item.title}
+        renderItem={({ item }) => (
+          <Pressable onPress={() => router.push(`/game/${item.id}`)} onLongPress={() => setItemMenu(item)}>
+            <Cover scenarioId={item.scenario.id} uri={coverUri(item)} style={{ height: 220 }}>
+              <View style={[ui.row, { justifyContent: 'space-between' }]}>
+                <Text style={{ color: '#ddd', fontSize: 12, fontWeight: '700', letterSpacing: 0.5 }}>
+                  {item.mode === 'rpg' ? '🎲 RPG' : '📜 ROLEPLAY'} · {new Date(item.updatedAt).toLocaleDateString()}
                 </Text>
-                <Text style={ui.muted} numberOfLines={1}>
-                  {item.scenario.title} · {item.mode === 'rpg' ? t('modeRpg') : t('modeRoleplay')}
-                </Text>
-                <Text style={ui.muted}>{new Date(item.updatedAt).toLocaleDateString()}</Text>
+                <Pressable onPress={() => setItemMenu(item)} hitSlop={12} accessibilityLabel={t('actions')}>
+                  <Text style={{ color: '#fff', fontSize: 22, fontWeight: '700' }}>⋯</Text>
+                </Pressable>
               </View>
-              <View style={{ gap: 6 }}>
-                <Button small kind="secondary" label={t('export')} onPress={() => exportAdventure(item).catch(() => {})} />
-                <Button small kind="ghost" label={t('delete')} onPress={() => confirmDelete(item)} />
+              <Text style={{ fontFamily: fonts.serifBold, color: '#fff', fontSize: 20 }} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <Text style={{ fontFamily: fonts.serif, color: '#e6ddd0', fontSize: 14, lineHeight: 20 }} numberOfLines={2}>
+                {lastNarration(item)}
+              </Text>
+              <View style={{ marginTop: 8, alignSelf: 'flex-start', backgroundColor: colors.accent, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 14 }}>
+                <Text style={{ color: colors.accentText, fontWeight: '700' }}>{t('continueStory')} ›</Text>
               </View>
-            </Pressable>
-          );
-        }}
+            </Cover>
+          </Pressable>
+        )}
       />
+
+      <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)} title={t('actions')}>
+        <ActionList
+          items={[
+            { icon: '✨', label: t('newAdventure'), onPress: () => (setMenuOpen(false), router.push('/new')) },
+            {
+              icon: '📥',
+              label: t('import'),
+              onPress: () => {
+                setMenuOpen(false);
+                importAdventure()
+                  .then((ok) => ok && refresh())
+                  .catch((e) => Alert.alert(t('import'), String(e?.message ?? e)));
+              },
+            },
+            { icon: '⚙️', label: t('settings'), onPress: () => (setMenuOpen(false), router.push('/settings')) },
+          ]}
+        />
+      </BottomSheet>
+
+      <BottomSheet visible={!!itemMenu} onClose={() => setItemMenu(null)} title={itemMenu?.title}>
+        {itemMenu && (
+          <ActionList
+            items={[
+              { icon: '▶️', label: t('continueStory'), onPress: () => (setItemMenu(null), router.push(`/game/${itemMenu.id}`)) },
+              { icon: '📤', label: t('export'), onPress: () => (setItemMenu(null), exportAdventure(itemMenu).catch(() => {})) },
+              { icon: '🗑️', label: t('delete'), danger: true, onPress: () => (setItemMenu(null), confirmDelete(itemMenu)) },
+            ]}
+          />
+        )}
+      </BottomSheet>
     </View>
   );
 }

@@ -13,7 +13,8 @@ import { checkText } from '@/safety/filter';
 import { saveAdventure } from '@/storage/adventures';
 import { useSettings } from '@/state/settings';
 import { Button, ChipGroup, Label } from '@/ui/components';
-import { colors, ui } from '@/ui/theme';
+import { Cover } from '@/ui/Cover';
+import { colors, fonts, ui } from '@/ui/theme';
 
 const START_ATTRS: Attributes = { str: 12, dex: 12, con: 12, int: 12, wis: 12, cha: 12 };
 
@@ -107,19 +108,26 @@ export default function NewAdventure() {
       <Text style={ui.muted}>{mode === 'rpg' ? t('modeRpgHelp') : t('modeRoleplayHelp')}</Text>
 
       <Label>{t('scenario')}</Label>
-      {[...scenarios, { id: 'custom', title: `✏️ ${t('customScenario')}`, description: '', ageRating: '' }].map((s) => (
-        <Pressable
-          key={s.id}
-          onPress={() => setScenarioId(s.id)}
-          style={[ui.card, { borderColor: s.id === scenarioId ? colors.accent : colors.border }]}
-        >
-          <View style={[ui.row, { justifyContent: 'space-between' }]}>
-            <Text style={[ui.text, { fontWeight: '700', flex: 1 }]}>{s.title}</Text>
-            {!!s.ageRating && <Text style={ui.muted}>{s.ageRating === 'L' ? 'L' : `${s.ageRating}+`}</Text>}
-          </View>
-          {!!s.description && <Text style={ui.muted}>{s.description}</Text>}
-        </Pressable>
-      ))}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingVertical: 4 }}>
+        {[...scenarios, { id: 'custom', title: t('customScenario'), description: '', ageRating: '' }].map((s) => (
+          <Pressable key={s.id} onPress={() => setScenarioId(s.id)}>
+            <Cover
+              scenarioId={s.id}
+              style={{ width: 200, height: 260, borderWidth: 3, borderColor: s.id === scenarioId ? colors.accent : 'transparent' }}
+            >
+              {!!s.ageRating && (
+                <Text style={{ color: '#ddd', fontSize: 11, fontWeight: '700' }}>{s.ageRating === 'L' ? 'LIVRE' : `${s.ageRating}+`}</Text>
+              )}
+              <Text style={{ fontFamily: fonts.serifBold, color: '#fff', fontSize: 18 }}>{s.title}</Text>
+              {!!s.description && (
+                <Text style={{ color: '#e6ddd0', fontSize: 12, lineHeight: 16 }} numberOfLines={4}>
+                  {s.description}
+                </Text>
+              )}
+            </Cover>
+          </Pressable>
+        ))}
+      </ScrollView>
       {isCustom && (
         <View style={{ gap: 8 }}>
           <TextInput style={ui.input} placeholder={t('scenarioTitle')} placeholderTextColor={colors.muted} value={customTitle} onChangeText={setCustomTitle} />
