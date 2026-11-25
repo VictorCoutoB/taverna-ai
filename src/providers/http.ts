@@ -31,6 +31,9 @@ export function errorFromStatus(status: number, body: string): ProviderError {
   if (status === 401 || status === 403) return new ProviderError('invalid_key', detail || 'Chave inválida', status);
   if (status === 402) return new ProviderError('no_credit', detail || 'Sem saldo', status);
   if (status === 429) return new ProviderError(/quota|credit|billing|insufficient/i.test(body) ? 'no_credit' : 'rate_limit', detail, status);
+  if (status === 400 && /model/i.test(body) && /not supported|does not exist|not found/i.test(body)) {
+    return new ProviderError('unavailable', detail, status);
+  }
   if (status === 404) return new ProviderError('unavailable', detail || 'Modelo ou endereço não encontrado', status);
   if (status >= 500) return new ProviderError('unavailable', detail || 'Serviço indisponível', status);
   return new ProviderError('unknown', detail || `HTTP ${status}`, status);

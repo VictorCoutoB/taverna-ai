@@ -17,7 +17,7 @@ import {
 } from '@/providers/registry';
 import type { ModelInfo } from '@/providers/types';
 import { IMAGE_STYLES, useSettings } from '@/state/settings';
-import { autoSelectChatGPTModel, ChatGPTSignIn } from '@/ui/ChatGPTSignIn';
+import { ChatGPTSignIn } from '@/ui/ChatGPTSignIn';
 import { Button, ChipGroup, Label } from '@/ui/components';
 import { colors, ui } from '@/ui/theme';
 
@@ -103,7 +103,7 @@ export default function SettingsScreen() {
           value={settings.text.provider}
           onChange={(provider) => update({ text: { provider, model: TEXT_PROVIDERS[provider].defaultModel } })}
         />
-        {settings.text.provider === 'chatgpt' && <ChatGPTSignIn onChange={(s) => s && autoSelectChatGPTModel()} />}
+        {settings.text.provider === 'chatgpt' && <ChatGPTSignIn />}
         <Text style={ui.muted}>{t('model')}</Text>
         <TextInput
           style={ui.input}

@@ -1,4 +1,4 @@
-import { setFetch } from '../http';
+import { errorFromStatus, setFetch } from '../http';
 import { anthropic } from '../text/anthropic';
 import { gemini } from '../text/gemini';
 import { openAICompatible } from '../text/openaiCompatible';
@@ -128,6 +128,29 @@ describe('chatgptPlan', () => {
     expect((calls[0].init!.headers as Record<string, string>).Authorization).toBe('Bearer TOKEN');
     const body = JSON.parse(calls[0].init!.body as string);
     expect(body).toEqual({ model: 'gpt-x', instructions: 'S', input: [{ role: 'user', content: 'u' }], store: false, stream: true });
+  });
+
+  it('lista modelos com Accept JSON e filtra visibility', async () => {
+    const calls = mockFetch(() =>
+      new Response(JSON.stringify({ data: [{ id: 'gpt-a', visibility: 'list' }, { id: 'gpt-hidden', visibility: 'hide' }, { id: 'gpt-b' }] }), { status: 200 }),
+    );
+    const models = await chatgptPlan(async () => 't').listModels();
+    expect(models.map((m) => m.id)).toEqual(['gpt-a', 'gpt-b']);
+    expect((calls[0].init!.headers as Record<string, string>).Accept).toBe('application/json');
+  });
+
+  it('modelo vazio: usa o primeiro modelo da conta', async () => {
+    const calls = mockFetch(({ url }) =>
+      url.endsWith('/models')
+        ? new Response(JSON.stringify({ data: [{ id: 'gpt-conta', visibility: 'list' }] }), { status: 200 })
+        : sse([{ type: 'response.output_text.delta', delta: 'ok' }, { type: 'response.completed' }]),
+    );
+    await chatgptPlan(async () => 't').chat([{ role: 'user', content: 'x' }], { model: '' });
+    expect(JSON.parse(calls[1].init!.body as string).model).toBe('gpt-conta');
+  });
+
+  it('erro 400 de modelo não suportado vira kind=unavailable', () => {
+    expect(errorFromStatus(400, `{"detail":"The '' model is not supported when using Codex with a ChatGPT account."}`).kind).toBe('unavailable');
   });
 
   it('limite do plano vira kind=plan_limit', async () => {

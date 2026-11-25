@@ -19,27 +19,38 @@ function failure(err: any): ProviderError {
  * sem mensagens "system" (vão em `instructions`).
  */
 export function chatgptPlan(getToken: () => Promise<string>): TextProvider {
-  const headers = async () => ({
+  const headers = async (accept: string) => ({
     'Content-Type': 'application/json',
     Authorization: `Bearer ${await getToken()}`,
-    Accept: 'text/event-stream',
+    Accept: accept,
   });
 
   async function listModels(): Promise<ModelInfo[]> {
-    const json = await requestJson(`${BASE}/models`, { headers: await headers() });
-    return (json?.data ?? [])
-      .filter((m: any) => m.visibility === undefined || m.visibility === 'list')
-      .map((m: any) => ({ id: String(m.id), name: String(m.display_name ?? m.name ?? m.id) }));
+    const json = await requestJson(`${BASE}/models`, { headers: await headers('application/json') });
+    const list: any[] = Array.isArray(json?.data) ? json.data : Array.isArray(json?.models) ? json.models : [];
+    return list
+      .filter((m) => m && (m.visibility === undefined || m.visibility === 'list'))
+      .map((m) => ({ id: String(m.id ?? m.slug), name: String(m.display_name ?? m.name ?? m.id ?? m.slug) }))
+      .filter((m) => m.id && m.id !== 'undefined');
+  }
+
+  /** Nunca envia modelo vazio: se faltar, usa o primeiro da conta. */
+  async function resolveModel(model: string): Promise<string> {
+    if (model.trim()) return model.trim();
+    const first = (await listModels())[0]?.id;
+    if (!first) throw new ProviderError('unavailable', 'Escolha um modelo em Configurações → Carregar lista de modelos.');
+    return first;
   }
 
   async function chat(messages: ChatMessage[], opts: ChatOptions): Promise<string> {
     const instructions = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n\n');
     const input = messages.filter((m) => m.role !== 'system').map((m) => ({ role: m.role, content: m.content }));
+    const model = await resolveModel(opts.model);
     const res = await request(`${BASE}/responses`, {
       method: 'POST',
-      headers: await headers(),
+      headers: await headers('text/event-stream'),
       signal: opts.signal,
-      body: JSON.stringify({ model: opts.model, instructions: instructions || undefined, input, store: false, stream: true }),
+      body: JSON.stringify({ model, instructions: instructions || undefined, input, store: false, stream: true }),
     });
     let out = '';
     let completed = false;

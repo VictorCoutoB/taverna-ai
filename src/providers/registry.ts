@@ -23,7 +23,7 @@ export interface ProviderMeta {
 }
 
 export const TEXT_PROVIDERS: Record<TextProviderId, ProviderMeta> = {
-  chatgpt: { label: 'ChatGPT (sua assinatura Plus/Pro)', signIn: true, defaultModel: '' },
+  chatgpt: { label: 'ChatGPT (sua assinatura Plus/Pro)', signIn: true, defaultModel: 'gpt-6.2-sol' },
   openrouter: { label: 'OpenRouter (vários modelos)', key: 'openrouter', defaultModel: 'anthropic/claude-sonnet-4.5' },
   anthropic: { label: 'Anthropic (Claude)', key: 'anthropic', defaultModel: 'claude-sonnet-5-5' },
   openai: { label: 'OpenAI (GPT)', key: 'openai', defaultModel: 'gpt-4.1-mini' },
