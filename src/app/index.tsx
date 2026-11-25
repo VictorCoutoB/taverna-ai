@@ -1,3 +1,4 @@
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Redirect, router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, FlatList, Platform, Pressable, Text, View } from 'react-native';
@@ -44,6 +45,7 @@ async function importAdventure(): Promise<boolean> {
 }
 
 export default function Home() {
+  const insets = useSafeAreaInsets();
   const t = useT();
   const onboarded = useSettings((s) => s.settings.onboarded);
   const [items, setItems] = useState<Adventure[]>([]);
@@ -92,7 +94,7 @@ export default function Home() {
         }}
       />
       <FlatList
-        contentContainerStyle={[ui.pad, { gap: 16, paddingBottom: 40 }]}
+        contentContainerStyle={[ui.pad, { gap: 16, paddingBottom: 40 + insets.bottom }]}
         data={items}
         keyExtractor={(a) => a.id}
         ListHeaderComponent={

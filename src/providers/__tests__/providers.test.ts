@@ -3,7 +3,7 @@ import { anthropic } from '../text/anthropic';
 import { gemini } from '../text/gemini';
 import { openAICompatible } from '../text/openaiCompatible';
 import { chatgptPlan } from '../text/chatgptPlan';
-import { localSdImage, openRouterImage } from '../image';
+import { geminiImage, localSdImage, openRouterImage } from '../image';
 import { ProviderError } from '../types';
 
 jest.mock('expo-speech', () => ({}));
@@ -168,6 +168,25 @@ describe('imagens', () => {
     expect(uri).toBe('data:image/png;base64,AAA');
     const body = JSON.parse(calls[0].init!.body as string);
     expect(body.messages[0].content[0]).toEqual({ type: 'image_url', image_url: { url: 'data:image/png;base64,REF' } });
+  });
+
+  it('Gemini gera imagem com referência e devolve data URI', async () => {
+    const calls = mockFetch(() =>
+      new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'ok' }, { inlineData: { mimeType: 'image/png', data: 'GGG' } }] } }] }), {
+        status: 200,
+      }),
+    );
+    const uri = await geminiImage('k').generate('castelo', { model: 'gemini-x-image', referenceImage: 'data:image/jpeg;base64,REF' });
+    expect(uri).toBe('data:image/png;base64,GGG');
+    expect(calls[0].url).toContain('/models/gemini-x-image:generateContent');
+    const body = JSON.parse(calls[0].init!.body as string);
+    expect(body.contents[0].parts[0]).toEqual({ inlineData: { mimeType: 'image/jpeg', data: 'REF' } });
+    expect(body.generationConfig.responseModalities).toContain('IMAGE');
+  });
+
+  it('Gemini sem imagem explica o motivo', async () => {
+    mockFetch(() => new Response(JSON.stringify({ promptFeedback: { blockReason: 'SAFETY' } }), { status: 200 }));
+    await expect(geminiImage('k').generate('x', { model: 'm' })).rejects.toThrow(/SAFETY/);
   });
 
   it('Stable Diffusion local usa txt2img', async () => {

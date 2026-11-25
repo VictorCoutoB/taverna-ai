@@ -1,4 +1,4 @@
-import { localSdImage, openAIImage, openRouterImage, stabilityImage } from './image';
+import { geminiImage, localSdImage, openAIImage, openRouterImage, stabilityImage } from './image';
 import { deviceSpeech, elevenLabsSpeech, openAISpeech } from './speech';
 import { anthropic } from './text/anthropic';
 import { chatgptPlan } from './text/chatgptPlan';
@@ -8,7 +8,7 @@ import type { ImageProvider, SpeechProvider, TextProvider } from './types';
 import { ProviderError } from './types';
 
 export type TextProviderId = 'chatgpt' | 'openrouter' | 'anthropic' | 'openai' | 'gemini' | 'ollama';
-export type ImageProviderId = 'openrouter' | 'openai' | 'stability' | 'sdlocal';
+export type ImageProviderId = 'gemini' | 'openrouter' | 'openai' | 'stability' | 'sdlocal';
 export type SpeechProviderId = 'device' | 'openai' | 'elevenlabs';
 /** Serviços que precisam de chave (cada pessoa usa a sua). */
 export type KeyId = 'openrouter' | 'anthropic' | 'openai' | 'gemini' | 'stability' | 'elevenlabs';
@@ -32,11 +32,18 @@ export const TEXT_PROVIDERS: Record<TextProviderId, ProviderMeta> = {
 };
 
 export const IMAGE_PROVIDERS: Record<ImageProviderId, ProviderMeta> = {
+  gemini: { label: 'Google (Gemini / Nano Banana)', key: 'gemini', defaultModel: 'gemini-2.5-flash-image' },
   openrouter: { label: 'OpenRouter', key: 'openrouter', defaultModel: 'google/gemini-2.5-flash-image' },
   openai: { label: 'OpenAI', key: 'openai', defaultModel: 'gpt-image-1-mini' },
   stability: { label: 'Stability AI', key: 'stability', defaultModel: 'core' },
   sdlocal: { label: 'Stable Diffusion (no seu PC)', local: true, defaultModel: '' },
 };
+
+/** Provedor de imagem que combina com o provedor de texto (mesma chave), se existir. */
+export function matchingImageProvider(text: TextProviderId): ImageProviderId | null {
+  if (text === 'gemini' || text === 'openrouter' || text === 'openai') return text;
+  return null;
+}
 
 export const SPEECH_PROVIDERS: Record<SpeechProviderId, ProviderMeta> = {
   device: { label: 'Voz do celular (grátis)', defaultModel: '' },
@@ -101,6 +108,8 @@ export function makeTextProvider(id: TextProviderId, keys: Keys, local: LocalUrl
 
 export function makeImageProvider(id: ImageProviderId, keys: Keys, local: LocalUrls): ImageProvider {
   switch (id) {
+    case 'gemini':
+      return geminiImage(needKey(keys, 'gemini'));
     case 'openrouter':
       return openRouterImage(needKey(keys, 'openrouter'));
     case 'openai':

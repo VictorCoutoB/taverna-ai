@@ -1,3 +1,4 @@
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
@@ -19,6 +20,7 @@ import { colors, fonts, ui } from '@/ui/theme';
 const START_ATTRS: Attributes = { str: 12, dex: 12, con: 12, int: 12, wis: 12, cha: 12 };
 
 export default function NewAdventure() {
+  const insets = useSafeAreaInsets();
   const t = useT();
   const { settings, keys } = useSettings();
   const lang = settings.language;
@@ -93,7 +95,7 @@ export default function NewAdventure() {
   };
 
   return (
-    <ScrollView style={ui.screen} contentContainerStyle={[ui.pad, { paddingBottom: 48 }]} keyboardShouldPersistTaps="handled">
+    <ScrollView style={ui.screen} contentContainerStyle={[ui.pad, { paddingBottom: 48 + insets.bottom }]} keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: t('newAdventure') }} />
 
       <Label>{t('mode')}</Label>

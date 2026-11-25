@@ -48,6 +48,47 @@ export function openRouterImage(apiKey: string): ImageProvider {
   };
 }
 
+/** Google Gemini (modelos de imagem "Nano Banana"), com a chave do AI Studio. Aceita imagem de referência. */
+export function geminiImage(apiKey: string): ImageProvider {
+  const BASE = 'https://generativelanguage.googleapis.com/v1beta';
+  const headers = { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey };
+  async function listModels(): Promise<ModelInfo[]> {
+    const json = await requestJson(`${BASE}/models?pageSize=200`, { headers });
+    return (json?.models ?? [])
+      .filter((m: any) => /image/i.test(String(m.name)) && (m.supportedGenerationMethods ?? []).includes('generateContent'))
+      .map((m: any) => ({ id: String(m.name).replace(/^models\//, ''), name: m.displayName ?? m.name }));
+  }
+  return {
+    id: 'gemini',
+    supportsReference: true,
+    listModels,
+    testKey: async () => void (await listModels()),
+    async generate(prompt, opts) {
+      const parts: any[] = [];
+      if (opts.referenceImage) {
+        const m = opts.referenceImage.match(/^data:([^;]+);base64,(.*)$/);
+        if (m) parts.push({ inlineData: { mimeType: m[1], data: m[2] } });
+        parts.push({ text: `Keep the character from the reference image identical (face, hair, clothes). ${prompt}` });
+      } else {
+        parts.push({ text: prompt });
+      }
+      const json = await requestJson(`${BASE}/models/${encodeURIComponent(opts.model)}:generateContent`, {
+        method: 'POST',
+        headers,
+        signal: opts.signal,
+        body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'] } }),
+      });
+      const out = (json?.candidates?.[0]?.content?.parts ?? []).find((p: any) => p.inlineData?.data || p.inline_data?.data);
+      const data = out?.inlineData ?? out?.inline_data;
+      if (!data) {
+        const reason = json?.promptFeedback?.blockReason ?? json?.candidates?.[0]?.finishReason;
+        throw new ProviderError('bad_response', reason ? `O Gemini não gerou a imagem (${reason}).` : 'O Gemini não retornou imagem.');
+      }
+      return `data:${data.mimeType ?? data.mime_type ?? 'image/png'};base64,${data.data}`;
+    },
+  };
+}
+
 export function openAIImage(apiKey: string): ImageProvider {
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` };
   return {

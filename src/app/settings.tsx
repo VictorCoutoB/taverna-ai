@@ -1,3 +1,4 @@
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, Linking, Modal, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
@@ -8,6 +9,7 @@ import {
   makeImageProvider,
   makeSpeechProvider,
   makeTextProvider,
+  matchingImageProvider,
   SPEECH_PROVIDERS,
   TEXT_PROVIDERS,
   type ImageProviderId,
@@ -46,6 +48,7 @@ function Picker({ visible, items, onPick, onClose }: { visible: boolean; items: 
 }
 
 export default function SettingsScreen() {
+  const insets = useSafeAreaInsets();
   const t = useT();
   const { settings, keys, update, setKey } = useSettings();
   const lang = settings.language;
@@ -92,7 +95,7 @@ export default function SettingsScreen() {
   const renderMsg = (k: string) => (msg[k]?.text ? <Text style={{ color: msg[k].ok ? colors.success : colors.danger }}>{msg[k].text}</Text> : null);
 
   return (
-    <ScrollView style={ui.screen} contentContainerStyle={[ui.pad, { paddingBottom: 48 }]} keyboardShouldPersistTaps="handled">
+    <ScrollView style={ui.screen} contentContainerStyle={[ui.pad, { paddingBottom: 48 + insets.bottom }]} keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: t('settings') }} />
 
       <View style={ui.card}>
@@ -100,7 +103,16 @@ export default function SettingsScreen() {
         <ChipGroup
           options={(Object.keys(TEXT_PROVIDERS) as TextProviderId[]).map((id) => ({ id, label: TEXT_PROVIDERS[id].label }))}
           value={settings.text.provider}
-          onChange={(provider) => update({ text: { provider, model: TEXT_PROVIDERS[provider].defaultModel } })}
+          onChange={(provider) => {
+            // Se o provedor de imagem atual não tem chave, troca para o que usa a mesma chave do texto.
+            const img = matchingImageProvider(provider);
+            const imgKey = IMAGE_PROVIDERS[settings.image.provider].key;
+            const switchImage = img && imgKey && !keys[imgKey];
+            update({
+              text: { provider, model: TEXT_PROVIDERS[provider].defaultModel },
+              ...(switchImage ? { image: { ...settings.image, provider: img, model: IMAGE_PROVIDERS[img].defaultModel } } : {}),
+            });
+          }}
         />
         {settings.text.provider === 'chatgpt' && <ChatGPTSignIn />}
         <ModelRow kind="text" />

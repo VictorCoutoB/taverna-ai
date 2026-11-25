@@ -1,3 +1,4 @@
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { colors, ui } from './theme';
@@ -16,6 +17,7 @@ export function BottomSheet({
   children: ReactNode;
   scroll?: boolean;
 }) {
+  const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -33,11 +35,11 @@ export function BottomSheet({
             </View>
           )}
           {scroll ? (
-            <ScrollView contentContainerStyle={[ui.pad, { paddingBottom: 32 }]} keyboardShouldPersistTaps="handled">
+            <ScrollView contentContainerStyle={[ui.pad, { paddingBottom: 32 + insets.bottom }]} keyboardShouldPersistTaps="handled">
               {children}
             </ScrollView>
           ) : (
-            <View style={[ui.pad, { paddingBottom: 32 }]}>{children}</View>
+            <View style={[ui.pad, { paddingBottom: 32 + insets.bottom }]}>{children}</View>
           )}
         </View>
       </KeyboardAvoidingView>

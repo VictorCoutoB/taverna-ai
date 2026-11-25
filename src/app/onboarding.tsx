@@ -1,14 +1,16 @@
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { errorMessage, useT } from '@/i18n';
-import { KEY_HELP, makeTextProvider, TEXT_PROVIDERS, type TextProviderId } from '@/providers/registry';
+import { IMAGE_PROVIDERS, KEY_HELP, makeTextProvider, matchingImageProvider, TEXT_PROVIDERS, type TextProviderId } from '@/providers/registry';
 import { useSettings } from '@/state/settings';
 import { autoSelectChatGPTModel, ChatGPTSignIn } from '@/ui/ChatGPTSignIn';
 import { Button, ChipGroup, Label } from '@/ui/components';
 import { colors, ui } from '@/ui/theme';
 
 export default function Onboarding() {
+  const insets = useSafeAreaInsets();
   const t = useT();
   const { settings, keys, update, setKey } = useSettings();
   const [agreed, setAgreed] = useState(false);
@@ -43,13 +45,20 @@ export default function Onboarding() {
       setTesting(false);
     }
     if (meta.key && key.trim()) await setKey(meta.key, key);
-    await update({ onboarded: true, local, text: { provider, model: settings.text.provider === provider ? settings.text.model : meta.defaultModel } });
+    // Imagens usam o mesmo serviço do texto quando possível (mesma chave).
+    const img = matchingImageProvider(provider);
+    await update({
+      onboarded: true,
+      local,
+      text: { provider, model: settings.text.provider === provider ? settings.text.model : meta.defaultModel },
+      ...(img ? { image: { ...settings.image, provider: img, model: IMAGE_PROVIDERS[img].defaultModel } } : {}),
+    });
     if (provider === 'chatgpt') await autoSelectChatGPTModel();
     router.replace('/');
   };
 
   return (
-    <ScrollView style={ui.screen} contentContainerStyle={[ui.pad, { paddingTop: 56, paddingBottom: 40 }]}>
+    <ScrollView style={ui.screen} contentContainerStyle={[ui.pad, { paddingTop: 56 + insets.top, paddingBottom: 40 + insets.bottom }]}>
       <Text style={{ fontSize: 48, textAlign: 'center' }}>🏰</Text>
       <Text style={[ui.title, { textAlign: 'center' }]}>{t('welcome')}</Text>
       <Text style={[ui.text, { textAlign: 'center' }]}>{t('welcomeText')}</Text>
