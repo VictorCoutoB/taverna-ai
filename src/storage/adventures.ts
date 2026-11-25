@@ -29,6 +29,9 @@ export async function saveAdventure(a: Adventure): Promise<void> {
 
 export async function deleteAdventure(a: Adventure): Promise<void> {
   await getKV().remove('adventures', a.id);
+  for (const row of await getKV().list('saves')) {
+    if (row.value.includes(`"adventureId":"${a.id}"`)) await getKV().remove('saves', row.id);
+  }
   await deleteImages([...a.messages.map((m) => m.imageUri), ...a.characters.map((c) => c.portraitUri)]);
 }
 

@@ -25,6 +25,8 @@ export interface Character {
 }
 
 export type StoryMessageRole = 'player' | 'narrator' | 'dice';
+/** Fazer (ação), Dizer (fala) ou História (o jogador escreve a narração). */
+export type ActionMode = 'do' | 'say' | 'story';
 
 export interface StoryMessage {
   id: string;
@@ -32,10 +34,48 @@ export interface StoryMessage {
   content: string;
   check?: CheckResult;
   imageUri?: string;
+  /** Opções de ação sugeridas pela IA (narração). */
+  choices?: string[];
+  /** Como a ação do jogador deve ser lida (jogador). */
+  actionMode?: ActionMode;
   /** Ficha antes deste turno (para desfazer). Fica na primeira mensagem do turno. */
   sheetBefore?: Sheet | null;
+  /** Diário antes deste turno (para desfazer). */
+  journalBefore?: Journal;
   createdAt: number;
 }
+
+export type StoryLength = 'short' | 'medium' | 'long';
+export type StoryTone = 'scenario' | 'epic' | 'dark' | 'funny' | 'romantic';
+
+export interface NarratorStyle {
+  length: StoryLength;
+  tone: StoryTone;
+}
+
+export const DEFAULT_STYLE: NarratorStyle = { length: 'medium', tone: 'scenario' };
+
+export type QuestStatus = 'active' | 'done' | 'failed';
+
+export interface Quest {
+  id: string;
+  title: string;
+  status: QuestStatus;
+}
+
+export interface Npc {
+  name: string;
+  note: string;
+}
+
+/** Memória da aventura: missões e personagens (IA) e fatos do mundo (jogador). */
+export interface Journal {
+  quests: Quest[];
+  npcs: Npc[];
+  facts: string[];
+}
+
+export const emptyJournal = (): Journal => ({ quests: [], npcs: [], facts: [] });
 
 export interface Adventure {
   id: string;
@@ -49,6 +89,10 @@ export interface Adventure {
   summary: string;
   summarizedUpTo: number;
   messages: StoryMessage[];
+  /** Opcional para aventuras antigas: usar DEFAULT_STYLE. */
+  style?: NarratorStyle;
+  /** Opcional para aventuras antigas: usar emptyJournal(). */
+  journal?: Journal;
   createdAt: number;
   updatedAt: number;
 }

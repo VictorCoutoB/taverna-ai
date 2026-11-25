@@ -11,7 +11,7 @@ export interface KV {
   list(table: string): Promise<{ id: string; value: string }[]>;
 }
 
-const TABLES = ['adventures', 'settings', 'reports'];
+const TABLES = ['adventures', 'settings', 'reports', 'saves'];
 
 function sqliteKV(): KV {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
